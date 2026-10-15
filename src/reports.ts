@@ -85,11 +85,62 @@ app.get('/reports/profit', async (c) => {
   // 手填项销售（不入库商品/服务）计入毛利总额，但不出现在按商品明细行中
   const manualRevenue = round2(manualSaleAgg?.revenue ?? 0)
   const manualCost = round2(manualSaleAgg?.cost ?? 0)
+
+  // ===== 按日合并趋势：销售 + 维修 + 其他收支 =====
+  const repairDailyRes = await db
+    .prepare(
+      `SELECT date(r.created_at) AS d,
+              COALESCE(SUM(r.fee + r.parts_total - r.discount), 0) AS revenue,
+              COALESCE(SUM((SELECT COALESCE(SUM(ri.qty * ri.unit_cost), 0) FROM repair_items ri WHERE ri.repair_id = r.id)), 0) AS cost
+       FROM repairs r WHERE r.created_at >= ?1 AND r.created_at < ?2 GROUP BY d`
+    )
+    .bind(from, to)
+    .all<{ d: string; revenue: number; cost: number }>()
+
+  const fundsDailyRes = await db
+    .prepare(
+      `SELECT date(created_at) AS d,
+              COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income,
+              COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expense
+       FROM funds WHERE type IN ('income','expense') AND created_at >= ?1 AND created_at < ?2 GROUP BY d`
+    )
+    .bind(from, to)
+    .all<{ d: string; income: number; expense: number }>()
+
+  // 合并三个来源到同一日期 Map
+  const dayMap = new Map<string, { d: string; saleRev: number; saleCost: number; saleDisc: number; orders: number; repRev: number; repCost: number; othInc: number; othExp: number }>()
+  for (const d of daily.results ?? []) {
+    dayMap.set(d.d, { d: d.d, saleRev: round2(d.revenue), saleCost: round2(d.cost), saleDisc: round2(d.discount), orders: d.orders, repRev: 0, repCost: 0, othInc: 0, othExp: 0 })
+  }
+  for (const r of repairDailyRes.results ?? []) {
+    const e = dayMap.get(r.d) || { d: r.d, saleRev: 0, saleCost: 0, saleDisc: 0, orders: 0, repRev: 0, repCost: 0, othInc: 0, othExp: 0 }
+    e.repRev = round2(r.revenue)
+    e.repCost = round2(r.cost)
+    dayMap.set(r.d, e)
+  }
+  for (const f of fundsDailyRes.results ?? []) {
+    const e = dayMap.get(f.d) || { d: f.d, saleRev: 0, saleCost: 0, saleDisc: 0, orders: 0, repRev: 0, repCost: 0, othInc: 0, othExp: 0 }
+    e.othInc = round2(f.income)
+    e.othExp = round2(f.expense)
+    dayMap.set(f.d, e)
+  }
+  const overviewDaily = [...dayMap.values()]
+    .map((e) => ({
+      d: e.d,
+      orders: e.orders,
+      saleProfit: round2(e.saleRev - e.saleCost - e.saleDisc),
+      repairProfit: round2(e.repRev - e.repCost),
+      otherNet: round2(e.othInc - e.othExp),
+      profit: round2((e.saleRev - e.saleCost - e.saleDisc) + (e.repRev - e.repCost) + (e.othInc - e.othExp)),
+    }))
+    .sort((a, b) => (a.d < b.d ? -1 : 1))
+
   return c.json({
     from,
     to,
     rows,
     daily: daily.results ?? [],
+    overviewDaily,
     discount: netDiscount,
     manualSale: { revenue: manualRevenue, cost: manualCost, profit: round2(manualRevenue - manualCost) },
     total: {

@@ -798,14 +798,14 @@
                 <h3 style="margin:18px 0 10px">按日趋势</h3>
                 <div class="table-wrap">
                   <table>
-                    <thead><tr><th>日期</th><th class="num">订单数</th><th class="num">销售额</th><th class="num">优惠</th><th class="num">毛利（净）</th></tr></thead>
+                    <thead><tr><th>日期</th><th class="num">销售毛利</th><th class="num">维修毛利</th><th class="num">其他收支</th><th class="num">经营利润</th></tr></thead>
                     <tbody>
-                      <tr v-for="d in profit.daily" :key="d.d" @click="toggleRepDay(d.d)" :class="{ 'active-row': repDayOpen === d.d }" style="cursor:pointer">
+                      <tr v-for="d in (profit.overviewDaily || [])" :key="d.d" @click="toggleRepDay(d.d)" :class="{ 'active-row': repDayOpen === d.d }" style="cursor:pointer">
                         <td>{{ d.d }} <span v-if="repDayOpen === d.d && repDayLoading" class="text-muted" style="font-size:11px">加载中…</span></td>
-                        <td class="num">{{ d.orders }}</td>
-                        <td class="num">{{ money(d.revenue) }}</td>
-                        <td class="num text-muted">{{ money(d.discount) }}</td>
-                        <td class="num text-green">{{ money(d.revenue - d.cost - d.discount) }}</td>
+                        <td class="num" :class="d.saleProfit >= 0 ? 'text-green' : 'text-danger'">{{ money(d.saleProfit) }}</td>
+                        <td class="num" :class="d.repairProfit >= 0 ? 'text-green' : 'text-danger'">{{ money(d.repairProfit) }}</td>
+                        <td class="num" :class="d.otherNet >= 0 ? 'text-green' : 'text-danger'">{{ money(d.otherNet) }}</td>
+                        <td class="num text-green"><strong>{{ money(d.profit) }}</strong></td>
                       </tr>
                       <tr v-if="repDayOpen" :key="'detail-' + repDayOpen">
                         <td colspan="5" style="background:#f8fafc; padding:0">
@@ -830,7 +830,7 @@
                       </tr>
                     </tbody>
                   </table>
-                  <div v-if="!profit.daily.length" class="empty">该时间段没有销售</div>
+                  <div v-if="!(profit.overviewDaily || []).length" class="empty">该时间段没有业务记录</div>
                 </div>
               </template>
             </div>
