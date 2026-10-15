@@ -842,12 +842,33 @@
                   <table>
                     <thead><tr><th>日期</th><th class="num">订单数</th><th class="num">销售额</th><th class="num">优惠</th><th class="num">毛利（净）</th></tr></thead>
                     <tbody>
-                      <tr v-for="d in profit.daily" :key="d.d">
-                        <td>{{ d.d }}</td>
+                      <tr v-for="d in profit.daily" :key="d.d" @click="toggleRepDay(d.d)" :class="{ 'active-row': repDayOpen === d.d }" style="cursor:pointer">
+                        <td>{{ d.d }} <span v-if="repDayOpen === d.d && repDayLoading" class="text-muted" style="font-size:11px">加载中…</span></td>
                         <td class="num">{{ d.orders }}</td>
                         <td class="num">{{ money(d.revenue) }}</td>
                         <td class="num text-muted">{{ money(d.discount) }}</td>
                         <td class="num text-green">{{ money(d.revenue - d.cost - d.discount) }}</td>
+                      </tr>
+                      <tr v-if="repDayOpen" :key="'detail-' + repDayOpen">
+                        <td colspan="5" style="background:#f8fafc; padding:0">
+                          <div v-if="repDaySales.length" class="table-wrap" style="margin:10px; border:none">
+                            <table>
+                              <thead><tr><th>时间</th><th>客户</th><th class="num">金额</th><th class="num">已收</th><th class="num">欠款</th><th class="num">明细数</th><th>备注</th></tr></thead>
+                              <tbody>
+                                <tr v-for="s in repDaySales" :key="s.id">
+                                  <td>{{ dt(s.created_at) }}</td>
+                                  <td>{{ s.customer_name || '散客' }} <span v-if="s.kind === 'return'" class="badge gray">退货</span></td>
+                                  <td class="num" :class="s.kind === 'return' ? 'text-green' : ''">{{ money(s.kind === 'return' ? -(s.total - s.discount) : s.total - s.discount) }}</td>
+                                  <td class="num">{{ money(s.paid) }}</td>
+                                  <td class="num" :class="s.kind === 'normal' && s.total - s.discount - s.paid > 0 ? 'text-danger' : ''">{{ money(s.kind === 'normal' ? s.total - s.discount - s.paid : 0) }}</td>
+                                  <td class="num">{{ s.item_count }}</td>
+                                  <td class="text-muted">{{ s.note || '—' }}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div v-else class="text-muted" style="padding:10px 14px; font-size:12.5px">该日无销售单</div>
+                        </td>
                       </tr>
                     </tbody>
                   </table>

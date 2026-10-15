@@ -180,11 +180,14 @@ const app = createApp({
       profit: null,
       summary: null,
       repairRep: null,
+      repDayOpen: '',        // 已展开的按日趋势日期（毛利报表）
+      repDaySales: [],
+      repDayLoading: false,
       fundsRep: null,
       fundsDetail: null,     // 单笔收支详情/编辑弹窗
       fundsForm: { type: 'income', party_id: '', account_id: '', amount: '', note: '', date: '' },
       fundsDayFilter: null,  // 按日汇总点击日期 → 筛选当天明细
-      sec: { profit: true, summary: false, repairs: false, debt: false, funds: false },
+      sec: { profit: false, summary: false, repairs: false, debt: false, funds: false },
       repLoading: false,
     }
   },
@@ -1329,6 +1332,21 @@ const app = createApp({
     },
 
     // ===== 采购 / 销售 =====
+    // 按日趋势点开当天的销售明细
+    async toggleRepDay(d) {
+      if (this.repDayOpen === d) { this.repDayOpen = ''; return }
+      this.repDayOpen = d
+      this.repDayLoading = true
+      try {
+        const r = rangeISO(d, d)
+        const q = `?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}`
+        this.repDaySales = await api('/sales' + q)
+      } catch (e) {
+        this.toast(e.message, 'err')
+      } finally {
+        this.repDayLoading = false
+      }
+    },
     statusCount(rep, status) {
       const row = (rep && rep.byStatus || []).find((x) => x.status === status)
       return row ? row.n : 0
