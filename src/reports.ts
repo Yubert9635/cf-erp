@@ -34,7 +34,10 @@ app.get('/reports/profit', async (c) => {
         `SELECT date(s.created_at) AS d,
                 SUM(CASE WHEN s.kind = 'normal' THEN si.qty * si.unit_price ELSE -si.qty * si.unit_price END) AS revenue,
                 SUM(CASE WHEN s.kind = 'normal' THEN si.qty * si.unit_cost ELSE -si.qty * si.unit_cost END) AS cost,
-                SUM(CASE WHEN s.kind = 'normal' THEN s.discount ELSE -s.discount END) AS discount,
+                -- 优惠按单据聚合（关联子查询一行一单），避免被明细行数重复累加导致当日毛利虚低
+                (SELECT COALESCE(SUM(CASE WHEN s2.kind = 'normal' THEN s2.discount ELSE -s2.discount END), 0)
+                   FROM sales s2 WHERE date(s2.created_at) = date(s.created_at)
+                     AND s2.created_at >= ?1 AND s2.created_at < ?2) AS discount,
                 COUNT(DISTINCT CASE WHEN s.kind = 'normal' THEN s.id END) AS orders
          FROM sale_items si JOIN sales s ON s.id = si.sale_id
          WHERE s.created_at >= ?1 AND s.created_at < ?2
