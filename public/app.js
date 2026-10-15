@@ -187,7 +187,7 @@ const app = createApp({
       fundsDetail: null,     // 单笔收支详情/编辑弹窗
       fundsForm: { type: 'income', party_id: '', account_id: '', amount: '', note: '', date: '' },
       fundsDayFilter: null,  // 按日汇总点击日期 → 筛选当天明细
-      sec: { profit: false, summary: false, repairs: false, debt: false, funds: false },
+      sec: { overview: false, salesProfit: false, summary: false, repairs: false, debt: false, funds: false },
       repLoading: false,
     }
   },
