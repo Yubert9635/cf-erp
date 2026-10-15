@@ -154,6 +154,52 @@ app.get('/reports/summary', async (c) => {
   return c.json({ from, to, rows })
 })
 
+// 维修报表：汇总（单数/应收/成本/毛利/已收/未收）+ 状态分布 + 明细列表
+app.get('/reports/repairs', async (c) => {
+  const db = c.env.DB
+  const { from, to } = range(c)
+  const [totals, byStatus, list] = await Promise.all([
+    db
+      .prepare(
+        `SELECT COUNT(*) AS n,
+                COALESCE(SUM(r.fee + r.parts_total - r.discount), 0) AS receivable,
+                COALESCE(SUM(r.paid), 0) AS paid,
+                COALESCE(SUM((SELECT COALESCE(SUM(ri.qty * ri.unit_cost), 0) FROM repair_items ri WHERE ri.repair_id = r.id)), 0) AS cost
+         FROM repairs r WHERE r.created_at >= ?1 AND r.created_at < ?2`
+      )
+      .bind(from, to)
+      .first<{ n: number; receivable: number; paid: number; cost: number }>(),
+    db
+      .prepare(`SELECT status, COUNT(*) AS n FROM repairs r WHERE r.created_at >= ?1 AND r.created_at < ?2 GROUP BY status`)
+      .bind(from, to)
+      .all<{ status: string; n: number }>(),
+    db
+      .prepare(
+        `SELECT r.*, (SELECT COUNT(*) FROM repair_items ri WHERE ri.repair_id = r.id) AS item_count
+         FROM repairs r WHERE r.created_at >= ?1 AND r.created_at < ?2 ORDER BY r.id DESC LIMIT 500`
+      )
+      .bind(from, to)
+      .all(),
+  ])
+  const receivable = round2(totals?.receivable ?? 0)
+  const cost = round2(totals?.cost ?? 0)
+  const paid = round2(totals?.paid ?? 0)
+  return c.json({
+    from,
+    to,
+    total: {
+      n: totals?.n ?? 0,
+      receivable,
+      cost,
+      profit: round2(receivable - cost),
+      paid,
+      unpaid: round2(receivable - paid),
+    },
+    byStatus: byStatus.results ?? [],
+    list: list.results ?? [],
+  })
+})
+
 // 其他收支报表：合计 + 按日 + 明细
 app.get('/reports/otherfunds', async (c) => {
   const db = c.env.DB

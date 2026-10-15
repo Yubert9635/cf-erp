@@ -179,11 +179,12 @@ const app = createApp({
       repTo: todayStr(),
       profit: null,
       summary: null,
+      repairRep: null,
       fundsRep: null,
       fundsDetail: null,     // 单笔收支详情/编辑弹窗
       fundsForm: { type: 'income', party_id: '', account_id: '', amount: '', note: '', date: '' },
       fundsDayFilter: null,  // 按日汇总点击日期 → 筛选当天明细
-      sec: { profit: true, summary: false, debt: false, funds: false },
+      sec: { profit: true, summary: false, repairs: false, debt: false, funds: false },
       repLoading: false,
     }
   },
@@ -1119,14 +1120,16 @@ const app = createApp({
       try {
         const r = rangeISO(this.repFrom, this.repTo)
         const q = '?from=' + encodeURIComponent(r.from) + '&to=' + encodeURIComponent(r.to)
-        const [profit, summary, fundsRep, parties] = await Promise.all([
+        const [profit, summary, repairRep, fundsRep, parties] = await Promise.all([
           api('/reports/profit' + q),
           api('/reports/summary' + q),
+          api('/reports/repairs' + q),
           api('/reports/otherfunds' + q),
           api('/parties'),
         ])
         this.profit = profit
         this.summary = summary
+        this.repairRep = repairRep
         this.fundsRep = fundsRep
         this.parties = parties
         this.accounts = await api('/accounts')
@@ -1326,6 +1329,10 @@ const app = createApp({
     },
 
     // ===== 采购 / 销售 =====
+    statusCount(rep, status) {
+      const row = (rep && rep.byStatus || []).find((x) => x.status === status)
+      return row ? row.n : 0
+    },
     customerSettled(customerId) {
       // 客户当前总欠款 <= 0（含预付）视为已结清
       if (!customerId) return false

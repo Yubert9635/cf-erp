@@ -857,6 +857,65 @@
             </div>
           </div>
 
+          <!-- 维修报表 -->
+          <div class="sec" :class="{ open: sec.repairs }">
+            <div class="sec-head" @click="sec.repairs = !sec.repairs">
+              <span class="title">维修报表</span>
+              <span class="sum" v-if="repairRep">维修单 {{ repairRep.total.n }} 单 · 应收 {{ money(repairRep.total.receivable) }} · 毛利 {{ money(repairRep.total.profit) }} · 未收 {{ money(repairRep.total.unpaid) }}</span>
+              <span class="arrow">▶</span>
+            </div>
+            <div class="sec-body" v-show="sec.repairs">
+              <template v-if="repairRep">
+                <div class="grid-cards">
+                  <div class="stat"><div class="label">维修单数</div><div class="value blue">{{ repairRep.total.n }} 单</div></div>
+                  <div class="stat"><div class="label">维修应收</div><div class="value">{{ money(repairRep.total.receivable) }}</div></div>
+                  <div class="stat"><div class="label">配件成本</div><div class="value">{{ money(repairRep.total.cost) }}</div></div>
+                  <div class="stat"><div class="label">维修毛利</div><div class="value green">{{ money(repairRep.total.profit) }}</div></div>
+                  <div class="stat"><div class="label">已收</div><div class="value">{{ money(repairRep.total.paid) }}</div></div>
+                  <div class="stat"><div class="label">未收</div><div class="value text-danger">{{ money(repairRep.total.unpaid) }}</div></div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+                  <span class="badge orange" v-if="statusCount(repairRep, 'repairing')">维修中 {{ statusCount(repairRep, 'repairing') }} 单</span>
+                  <span class="badge blue" v-if="statusCount(repairRep, 'done')">已完成 {{ statusCount(repairRep, 'done') }} 单</span>
+                  <span class="badge green" v-if="statusCount(repairRep, 'closed')">已取机 {{ statusCount(repairRep, 'closed') }} 单</span>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>时间</th><th>客户</th><th>设备/故障</th><th class="num">维修费</th><th class="num">配件费</th><th class="num">优惠</th><th class="num">应收</th><th class="num">已收</th><th class="num">未收</th><th>状态</th><th class="num">配件数</th></tr></thead>
+                    <tbody>
+                      <tr v-for="r in repairRep.list" :key="r.id">
+                        <td>{{ dt(r.created_at) }}</td>
+                        <td>{{ r.customer_name || '散客' }}</td>
+                        <td style="max-width:200px"><div>{{ r.device || '—' }}</div><div class="text-muted" style="font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.fault || '' }}</div></td>
+                        <td class="num">{{ money(r.fee) }}</td>
+                        <td class="num">{{ money(r.parts_total) }}</td>
+                        <td class="num">{{ money(r.discount) }}</td>
+                        <td class="num"><strong>{{ money(r.fee + r.parts_total - r.discount) }}</strong></td>
+                        <td class="num">{{ money(r.paid) }}</td>
+                        <td class="num" :class="r.fee + r.parts_total - r.discount - r.paid > 0 ? 'text-danger' : ''">{{ money(r.fee + r.parts_total - r.discount - r.paid) }}</td>
+                        <td><span class="badge" :class="r.status === 'repairing' ? 'orange' : r.status === 'done' ? 'blue' : 'green'">{{ repairStatusLabel(r.status) }}</span></td>
+                        <td class="num">{{ r.item_count }}</td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td><strong>合计</strong></td><td></td><td></td>
+                        <td class="num">{{ money(repairRep.list.reduce((s, x) => s + Number(x.fee || 0), 0)) }}</td>
+                        <td class="num">{{ money(repairRep.list.reduce((s, x) => s + Number(x.parts_total || 0), 0)) }}</td>
+                        <td class="num">{{ money(repairRep.list.reduce((s, x) => s + Number(x.discount || 0), 0)) }}</td>
+                        <td class="num"><strong>{{ money(repairRep.list.reduce((s, x) => s + Number(x.fee || 0) + Number(x.parts_total || 0) - Number(x.discount || 0), 0)) }}</strong></td>
+                        <td class="num">{{ money(repairRep.list.reduce((s, x) => s + Number(x.paid || 0), 0)) }}</td>
+                        <td class="num" :class="repairRep.list.reduce((s, x) => s + Number(x.fee || 0) + Number(x.parts_total || 0) - Number(x.discount || 0) - Number(x.paid || 0), 0) > 0 ? 'text-danger' : ''">{{ money(repairRep.list.reduce((s, x) => s + Number(x.fee || 0) + Number(x.parts_total || 0) - Number(x.discount || 0) - Number(x.paid || 0), 0)) }}</td>
+                        <td></td><td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  <div v-if="!repairRep.list.length" class="empty">本期无维修记录</div>
+                </div>
+              </template>
+            </div>
+          </div>
+
           <!-- 进销存汇总 -->
           <div class="sec" :class="{ open: sec.summary }">
             <div class="sec-head" @click="sec.summary = !sec.summary">
