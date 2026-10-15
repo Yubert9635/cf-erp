@@ -785,6 +785,7 @@
             <div class="sec-head" @click="sec.overview = !sec.overview">
               <span class="title">经营汇总</span>
               <span class="sum" v-if="profit">销售毛利 {{ money(profit.total.profit) }} · 维修毛利 {{ money(profit.repair?.profit || 0) }} · 其他收支 {{ money((fundsRep?.income || 0) - (fundsRep?.expense || 0)) }} · 经营利润合计 {{ money((profit.total.profit || 0) + (profit.repair?.profit || 0) + ((fundsRep?.income || 0) - (fundsRep?.expense || 0))) }}</span>
+              <button class="btn-sm" @click.stop="printSection('overview')">打印</button>
               <span class="arrow">▶</span>
             </div>
             <div class="sec-body" v-show="sec.overview">
@@ -839,8 +840,9 @@
           <!-- 销售利润报表 -->
           <div class="sec" :class="{ open: sec.salesProfit }">
             <div class="sec-head" @click="sec.salesProfit = !sec.salesProfit">
-              <span class="title">销售利润报表</span>
+              <span class="title">销售利润</span>
               <span class="sum" v-if="profit">销售额 {{ money(profit.total.revenue) }} · 成本 {{ money(profit.total.cost) }} · 毛利 {{ money(profit.total.profit) }} · {{ profit.rows.length }} 个商品有销售</span>
+              <button class="btn-sm" @click.stop="printSection('salesProfit')">打印</button>
               <span class="arrow">▶</span>
             </div>
             <div class="sec-body" v-show="sec.salesProfit">
@@ -896,6 +898,7 @@
             <div class="sec-head" @click="sec.repairs = !sec.repairs">
               <span class="title">维修报表</span>
               <span class="sum" v-if="repairRep">维修单 {{ repairRep.total.n }} 单 · 应收 {{ money(repairRep.total.receivable) }} · 毛利 {{ money(repairRep.total.profit) }} · 未收 {{ money(repairRep.total.unpaid) }}</span>
+              <button class="btn-sm" @click.stop="printSection('repairs')">打印</button>
               <span class="arrow">▶</span>
             </div>
             <div class="sec-body" v-show="sec.repairs">
@@ -953,7 +956,7 @@
           <!-- 进销存汇总 -->
           <div class="sec" :class="{ open: sec.summary }">
             <div class="sec-head" @click="sec.summary = !sec.summary">
-              <span class="title">进销存汇总</span>
+              <span class="title">进销汇总</span>
               <span class="sum" v-if="summary">{{ summary.rows.length }} 个商品 · 期末合计 {{ qfmt(summary.rows.reduce((s, r) => s + r.closing, 0)) }}</span>
               <span class="arrow">▶</span>
             </div>
@@ -1014,6 +1017,7 @@
             <div class="sec-head" @click="sec.funds = !sec.funds">
               <span class="title">其他收支</span>
               <span class="sum" v-if="fundsRep">收入 {{ money(fundsRep.income) }} · 支出 {{ money(fundsRep.expense) }} · 净额 {{ money(fundsRep.income - fundsRep.expense) }} · {{ fundsRep.n }} 笔</span>
+              <button class="btn-sm" @click.stop="printFundsList">打印</button>
               <span class="arrow">▶</span>
             </div>
             <div class="sec-body" v-show="sec.funds">

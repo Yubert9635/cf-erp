@@ -1555,6 +1555,25 @@ const app = createApp({
 
     // ===== 打印 =====
     doPrint() { window.print() },
+    printSection(name) {
+      const today = this.dt(new Date().toISOString())
+      if (name === 'overview' && this.profit) {
+        const rows = (this.profit.overviewDaily || []).map(d => [d.d, this.money(d.saleProfit), this.money(d.repairProfit), this.money(d.otherNet), this.money(d.profit)])
+        this.printDoc = { title: '经营汇总', no: '', meta: [['日期范围', (this.repFrom || '') + ' 至 ' + (this.repTo || '')], ['打印时间', today]], table: { head: ['日期','销售毛利','维修毛利','其他收支','经营利润'], rows }, totals: [['合计', this.money((this.profit.total.profit||0) + (this.profit.repair?.profit||0) + ((this.fundsRep?.income||0)-(this.fundsRep?.expense||0)))]], sign: '', footer: this.company.print_footer_note || '' }
+      } else if (name === 'salesProfit' && this.profit) {
+        const rows = (this.profit.rows || []).map(r => [r.name, this.qfmt(r.qty)+' '+(r.unit||''), this.money(r.revenue), this.money(r.cost), this.money(r.profit), r.revenue ? ((r.profit/r.revenue)*100).toFixed(1)+'%' : '-'])
+        this.printDoc = { title: '销售利润', no: '', meta: [['日期范围', (this.repFrom||'')+' 至 '+(this.repTo||'')], ['打印时间', today], ['销售额', this.money(this.profit.total.revenue)], ['毛利净', this.money(this.profit.total.profit)]], table: { head: ['商品','净销量','销售额','成本','毛利','毛利率'], rows }, totals: [['毛利合计', this.money(this.profit.total.profit)]], sign: '', footer: this.company.print_footer_note || '' }
+      } else if (name === 'repairs' && this.repairRep) {
+        const rows = (this.repairRep.list || []).map(r => [this.dt(r.created_at), r.customer_name||'散客', r.device||'-', this.money(r.fee), this.money(r.parts_total), this.money(r.fee+r.parts_total-r.discount), this.money(r.paid), this.repairStatusLabel(r.status)])
+        this.printDoc = { title: '维修报表', no: '', meta: [['日期范围', (this.repFrom||'')+' 至 '+(this.repTo||'')], ['打印时间', today], ['单数', (this.repairRep.total.n||0)+' 单'], ['毛利', this.money(this.repairRep.total.profit)]], table: { head: ['时间','客户','设备','维修费','配件费','应收','已收','状态'], rows }, totals: [['应收合计', this.money(this.repairRep.total.receivable)], ['毛利合计', this.money(this.repairRep.total.profit)]], sign: '', footer: this.company.print_footer_note || '' }
+      } else if (name === 'summary' && this.summary) {
+        const rows = (this.summary.rows || []).map(r => [r.name||(this.productMap[r.product_id]||{}).name||r.product_id, this.qfmt(r.opening), this.qfmt(r.purchase_in), this.qfmt(r.purchase_return), this.qfmt(r.sale_out), this.qfmt(r.sale_return), this.qfmt(r.repair_out), this.qfmt(r.adjust_in), this.qfmt(r.adjust_out), this.qfmt(r.closing), r.unit])
+        this.printDoc = { title: '进销汇总', no: '', meta: [['日期范围', (this.repFrom||'')+' 至 '+(this.repTo||'')], ['打印时间', today], ['商品数', (this.summary.rows||[]).length+' 个']], table: { head: ['商品','期初','采购入库','采购退货','销售出库','销售退货','维修领用','盘盈','盘亏','期末','单位'], rows }, totals: [], sign: '', footer: this.company.print_footer_note || '' }
+      } else if (name === 'debt' && this.parties) {
+        const rows = [...this.customers, ...this.suppliers].filter(p => Number(p.debt) !== 0).map(p => [p.type==='customer'?'客户':'供应商', p.name, p.phone||'-', this.money(p.debt)])
+        this.printDoc = { title: '往来欠款', no: '', meta: [['打印时间', today], ['客户欠款合计', this.money(this.customerDebtTotal)], ['供应商欠款合计', this.money(this.supplierDebtTotal)]], table: { head: ['类型','名称','电话','欠款'], rows }, totals: [], sign: '', footer: this.company.print_footer_note || '' }
+      }
+    },
     closePrint() {
       this.printDoc = null
     },
