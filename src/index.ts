@@ -155,8 +155,7 @@ export default {
       (async () => {
         try {
           await ensureSchema(env.DB)
-          const res = await executeWebDAVBackup(env.DB, { source: 'cron' })
-          console.log('[WebDAV Cron] 定时备份结果:', JSON.stringify(res))
+          await executeWebDAVBackup(env.DB, { source: 'cron' })
         } catch (e) {
           console.error('[WebDAV Cron] 定时备份异常:', e)
         }

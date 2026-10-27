@@ -81,11 +81,6 @@ export function ensureSchema(db: D1Database) {
   return initPromise
 }
 
-export function num(v: unknown): number | null {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : null
-}
-
 export function round2(n: number): number {
   return Math.round(n * 100) / 100
 }

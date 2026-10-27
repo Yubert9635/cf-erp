@@ -192,7 +192,7 @@ export async function executeWebDAVBackup(
     // 5. 清理超出保留天数的旧备份
     const pruned = await pruneOldBackups(baseUrl, auth, cleanDir, cfg.keep_days || 10)
     if (pruned.deleted.length) {
-      console.log('[WebDAV] 已清理过期备份:', pruned.deleted.join(', '))
+      // 过期备份已清理（静默）
     }
 
     // 6. 记录成功状态
@@ -205,7 +205,6 @@ export async function executeWebDAVBackup(
       okStmts.push(db.prepare("INSERT INTO sys_config (key, value) VALUES ('webdav_sched_last_status', 'success') ON CONFLICT(key) DO UPDATE SET value = 'success'"))
     }
     await db.batch(okStmts)
-    console.log(`[WebDAV] ${source} 备份成功 ${filename} 耗时 ${Date.now() - startTs}ms`)
     return { ok: true, filename }
   } catch (err: any) {
     const errMsg = err?.message || String(err)
@@ -218,7 +217,7 @@ export async function executeWebDAVBackup(
       errStmts.push(db.prepare("INSERT INTO sys_config (key, value) VALUES ('webdav_sched_last_error', ?1) ON CONFLICT(key) DO UPDATE SET value = ?1").bind(errMsg))
     }
     await db.batch(errStmts)
-    console.log(`[WebDAV] ${source} 备份失败 ${filename} 耗时 ${Date.now() - startTs}ms: ${errMsg}`)
+    // 备份失败已记录到 sys_config (webdav_sched_last_error)
     return { ok: false, error: errMsg }
   }
 }
@@ -361,9 +360,6 @@ app.post('/settings/webdav/list', requireAdmin, async (c) => {
     return c.json({
       ok: true,
       files,
-      // 调试诊断：原始响应前 3000 字符 + response 节点计数（便于排查服务器返回格式差异）
-      xml_sample: xml.slice(0, 3000),
-      resp_count: (xml.match(/<(?:[A-Za-z0-9_-]+:)?response\b[^>]*>/g) || []).length,
     })
   } catch (err: any) {
     return c.json({ error: `WebDAV 连接失败：${err?.message || String(err)}`, files: [] }, 200)
